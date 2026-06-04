@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { usePuterStore } from "~/lib/puter";
+
 export const meta = () => [
   { title: "resumyze | Auth" },
   { name: "description", content: "Log into your account" },
 ];
 
 const Auth = () => {
+  
   const { isLoading, auth } = usePuterStore();
   const location = useLocation();
   const next = location.search.split('next=')[1];

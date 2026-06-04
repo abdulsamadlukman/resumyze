@@ -29,20 +29,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { init } = usePuterStore();
 
   useEffect(() => {
-    init()
-  }, [init]);
+  init();
+}, [init]);
 
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        
+        <script src="https://js.puter.com/v2/"></script>
         <Meta />
         <Links />
       </head>
       <body>
-        <script src="https://js.puter.com/v2/"></script>
-
         {children}
         <ScrollRestoration />
         <Scripts />
