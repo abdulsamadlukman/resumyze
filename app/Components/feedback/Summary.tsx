@@ -66,4 +66,4 @@ const Summary = ({ feedback }: { feedback: Feedback }) => {
   );
 };
 
-export default Summary;
+export default Summary;  
