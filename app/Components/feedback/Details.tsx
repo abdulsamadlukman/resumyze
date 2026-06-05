@@ -90,8 +90,8 @@ const CategoryContent = ({
               <img
                 src={
                   tip.type === "good"
-                    ? "/icons/check.svg"
-                    : "/icons/warning.svg"
+                    ? "public/icons/check.svg"
+                    : "public/icons/warning.svg"
                 }
                 alt="score"
                 className="size-5"

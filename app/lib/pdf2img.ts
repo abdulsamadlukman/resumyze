@@ -97,7 +97,7 @@ export async function convertPdfToImage(
     console.log("1. Starting conversion");
 
     const lib = await loadPdfJs();
-    console.log("2. PDF.js loaded");
+console.log("PDF.js version:", lib.version);
 
     const arrayBuffer = await file.arrayBuffer();
     console.log("3. File read");

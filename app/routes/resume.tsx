@@ -5,10 +5,10 @@ import Details from '~/Components/feedback/Details';
 import Summary from '~/Components/feedback/Summary';
 import { usePuterStore } from '~/lib/puter';
 
-export const meta = () => [
+export const meta = () => ([
   { title: "resumyze | Review" },
   { name: "description", content: "Detailed overview of  your resume" },
-];
+]);
 
 const Resume = () => {
     const {auth, isLoading, fs, kv } = usePuterStore();
@@ -19,7 +19,7 @@ const Resume = () => {
     const navigate = useNavigate( );
 
     useEffect(() => {
-      if(!auth.isAuthenticated && isLoading) navigate('/auth?next=/resume/${id}')
+      if(!isLoading && !auth.isAuthenticated) navigate('/auth?next=/resume/${id}')
     }, [auth.isAuthenticated, isLoading]);
 
     useEffect(() => {
@@ -48,7 +48,7 @@ const Resume = () => {
       }
 
       loadResume();
-    }, [id]); 
+    }, [id, kv, fs]); 
     
   return (
     <main className="!pt-0">
@@ -86,3 +86,4 @@ const Resume = () => {
 };
 
 export default Resume;
+  
