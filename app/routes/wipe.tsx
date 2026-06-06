@@ -1,63 +1,85 @@
-import { error } from "console";
-import{ useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { usePuterStore } from "~/lib/puter";
 
 const WipeApp = () => {
-    const { auth, isLoading, clearError, fs, ai, kv } = usePuterStore();
-    const navigate = useNavigate();
-    const [files, setFiles] = useState<FSItem[]>([]);
+  const { auth, isLoading, error, clearError, fs, ai, kv } = usePuterStore();
+  const navigate = useNavigate();
+  const [files, setFiles] = useState<FSItem[]>([]);
 
-    const loadFiles = async () => {
-        const files = (await fs.readDir('./')) as FSItem[];
-        setFiles(files);
-    };
+  const loadFiles = async () => {
+    const files = (await fs.readDir("./")) as FSItem[];
+    console.log("wipe: loaded files:", files);
+    setFiles(files);
+  };
 
-    useEffect(() => {
-        loadFiles();
-    }, []);
+  useEffect(() => {
+    loadFiles();
+  }, []);
 
-    useEffect(() => {
-        if(!isLoading && !auth.isAuthenticated){
-            navigate('/auth?next=/wipe');
-        }
-    }, [isLoading]);
-
-    const handleDelete = async () => {
-      files.forEach( async(file) => {
-        await fs.delete(file.path);
-      });
-      await kv.flush();
-      loadFiles();
-    };
-
-    if (isLoading) {
-        return <div>Loading...</div>;
+  useEffect(() => {
+    if (!isLoading && !auth.isAuthenticated) {
+      navigate("/auth?next=/wipe");
     }
+  }, [isLoading, auth.isAuthenticated, navigate]);
 
-    // if(error) {
-    //     return <div>Error {error}</div>;
-    // }
+  const handleDelete = async () => {
+    try {
+      console.log(
+        "wipe: deleting files",
+        files.map((f) => f.path),
+      );
+      if (files.length > 0) {
+        const results = await Promise.all(
+          files.map(async (file) => {
+            try {
+              const r = await fs.delete(file.path);
+              return { path: file.path, ok: true, result: r };
+            } catch (e) {
+              return { path: file.path, ok: false, error: e };
+            }
+          }),
+        );
+        console.log("wipe: delete results", results);
+      }
+      const flushed = await kv.flush();
+      console.log("wipe: kv.flush result", flushed);
+      await loadFiles();
+    } catch (err) {
+      console.error("Wipe failed", err);
+      alert("Failed to wipe files. See console for details.");
+    }
+  };
 
-    return(
-        <div>
-            Authenticated as: {auth.user ?.username}
-            <div>Existing files:</div>
-            <div className="flex flex-col gap-4">
-                {files.map((file) => (
-                    <div key={file.id} className="flex flex-row gap-4">
-                        <p>{file.name}</p>
-                    </div>
-                ))}
-            </div>
-            <div>
-                <button className="bg-blue-500 text-white px-4 rounded-md" onClick={() => handleDelete()}>
-                    Wipe App Data
-                </button>
-            </div> 
-        </div>
-    );
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
+  if (error) {
+    return <div>Error {String(error)}</div>;
+  }
+
+  return (
+    <div>
+      Authenticated as: {auth.user?.username}
+      <div>Existing files:</div>
+      <div className="flex flex-col gap-4">
+        {files.map((file) => (
+          <div key={file.id} className="flex flex-row gap-4">
+            <p>{file.name}</p>
+          </div>
+        ))}
+      </div>
+      <div>
+        <button
+          className="bg-blue-500 text-white px-4 rounded-md"
+          onClick={() => handleDelete()}
+        >
+          Wipe App Data
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default WipeApp;
