@@ -10,6 +10,14 @@ export const meta = () => ([
   { name: "description", content: "Detailed overview of  your resume" },
 ]);
 
+export const links = () => [
+  {
+    rel: "icon",
+    type: "image/png",
+    href: "public/favicon_io_re/favicon-16x16.png",
+  },
+];
+
 const Resume = () => {
     const {auth, isLoading, fs, kv } = usePuterStore();
     const { id } = useParams();

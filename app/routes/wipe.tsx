@@ -6,7 +6,7 @@ export const links = () => [
   {
     rel: "icon",
     type: "image/png",
-    href: "/favicon_io_re/favicon-16x16.png",
+    href: "public/favicon_io_re/favicon-16x16.png",
   },
 ];
 
