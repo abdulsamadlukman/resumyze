@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { usePuterStore } from "~/lib/puter";
 
+export const links = () => [
+  {
+    rel: "icon",
+    type: "image/png",
+    href: "/favicon_io_re/favicon-16x16.png",
+  },
+];
+
 const WipeApp = () => {
   const { auth, isLoading, error, clearError, fs, ai, kv } = usePuterStore();
   const navigate = useNavigate();

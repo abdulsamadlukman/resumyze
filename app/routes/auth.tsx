@@ -7,6 +7,16 @@ export const meta = () => [
   { name: "description", content: "Log into your account" },
 ];
 
+
+
+export const links = () => [
+  {
+    rel: "icon",
+    type: "image/png",
+    href: "/favicon_io_re/favicon-16x16.png",
+  },
+];
+
 const Auth = () => {
   
   const { isLoading, auth } = usePuterStore();

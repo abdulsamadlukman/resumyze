@@ -13,6 +13,14 @@ export const meta = () => [
   { name: "description", content: "Smart feedback for your dream job" },
 ];
 
+export const links = () => [
+  {
+    rel: "icon",
+    type: "image/png",
+    href: "/favicon_io_re/favicon-16x16.png",
+  },
+];
+
 const Upload = () => {
     const { auth, isLoading, fs, ai, kv } = usePuterStore();
     const navigate = useNavigate();
