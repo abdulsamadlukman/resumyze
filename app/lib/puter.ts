@@ -12,11 +12,16 @@ declare global {
       fs: {
         write: (
           path: string,
-          data: string | File | Blob
+          data: string | File | Blob,
         ) => Promise<File | undefined>;
         read: (path: string) => Promise<Blob>;
         upload: (file: File[] | Blob[]) => Promise<FSItem>;
         delete: (path: string) => Promise<void>;
+        // Optional alternate method names some runtimes may expose
+        remove?: (path: string) => Promise<void>;
+        del?: (path: string) => Promise<void>;
+        unlink?: (path: string) => Promise<void>;
+        rm?: (path: string) => Promise<void>;
         readdir: (path: string) => Promise<FSItem[] | undefined>;
       };
       ai: {
@@ -24,17 +29,19 @@ declare global {
           prompt: string | ChatMessage[],
           imageURL?: string | PuterChatOptions,
           testMode?: boolean,
-          options?: PuterChatOptions
+          options?: PuterChatOptions,
         ) => Promise<Object>;
         img2txt: (
           image: string | File | Blob,
-          testMode?: boolean
+          testMode?: boolean,
         ) => Promise<string>;
       };
       kv: {
         get: (key: string) => Promise<string | null>;
         set: (key: string, value: string) => Promise<boolean>;
-        delete: (key: string) => Promise<boolean>;
+        delete?: (key: string) => Promise<boolean>;
+        remove?: (key: string) => Promise<boolean>;
+        del?: (key: string) => Promise<boolean>;
         list: (pattern: string, returnValues?: boolean) => Promise<string[]>;
         flush: () => Promise<boolean>;
       };
@@ -58,7 +65,7 @@ interface PuterStore {
   fs: {
     write: (
       path: string,
-      data: string | File | Blob
+      data: string | File | Blob,
     ) => Promise<File | undefined>;
     read: (path: string) => Promise<Blob | undefined>;
     upload: (file: File[] | Blob[]) => Promise<FSItem | undefined>;
@@ -70,15 +77,15 @@ interface PuterStore {
       prompt: string | ChatMessage[],
       imageURL?: string | PuterChatOptions,
       testMode?: boolean,
-      options?: PuterChatOptions
+      options?: PuterChatOptions,
     ) => Promise<AIResponse | undefined>;
     feedback: (
       path: string,
-      message: string
+      message: string,
     ) => Promise<AIResponse | undefined>;
     img2txt: (
       image: string | File | Blob,
-      testMode?: boolean
+      testMode?: boolean,
     ) => Promise<string | undefined>;
   };
   kv: {
@@ -87,11 +94,11 @@ interface PuterStore {
     delete: (key: string) => Promise<boolean | undefined>;
     list: (
       pattern: string,
-      returnValues?: boolean
+      returnValues?: boolean,
     ) => Promise<string[] | KVItem[] | undefined>;
     flush: () => Promise<boolean | undefined>;
   };
-  
+
   init: () => void;
   clearError: () => void;
 }
@@ -104,15 +111,6 @@ export const usePuterStore = create<PuterStore>((set, get) => {
     set({
       error: msg,
       isLoading: false,
-      auth: {
-        user: null,
-        isAuthenticated: false,
-        signIn: get().auth.signIn,
-        signOut: get().auth.signOut,
-        refreshUser: get().auth.refreshUser,
-        checkAuthStatus: get().auth.checkAuthStatus,
-        getUser: get().auth.getUser,
-      },
     });
   };
 
@@ -307,14 +305,56 @@ export const usePuterStore = create<PuterStore>((set, get) => {
       setError("Puter.js not available");
       return;
     }
-    return puter.fs.delete(path);
+
+    const candidates: { fn?: Function; name: string }[] = [
+      { fn: puter.fs.delete, name: "delete" },
+      { fn: puter.fs.remove, name: "remove" },
+      { fn: puter.fs.del, name: "del" },
+      { fn: puter.fs.unlink, name: "unlink" },
+      { fn: puter.fs.rm, name: "rm" },
+    ];
+
+    const errors: string[] = [];
+
+    for (const c of candidates) {
+      if (typeof c.fn === "function") {
+        try {
+          await (c.fn as Function).call(puter.fs, path);
+          return; // success
+        } catch (err) {
+          let msg = "";
+          if (err instanceof Error) msg = err.message;
+          else if (typeof err === "object" && err !== null) {
+            try {
+              msg = JSON.stringify(err);
+            } catch (e) {
+              msg = String(err);
+            }
+          } else {
+            msg = String(err);
+          }
+          errors.push(`fs.${c.name} failed: ${msg}`);
+          console.error(
+            `Puter fs.${c.name} failed when deleting ${path}:`,
+            err,
+          );
+        }
+      }
+    }
+
+    const finalMsg = `Puter FS delete failed for ${path}. Tried methods: ${candidates
+      .map((c) => c.name)
+      .join(", ")}. Errors: ${errors.join(" | ")}`;
+    setError(finalMsg);
+    console.error(finalMsg);
+    return;
   };
 
   const chat = async (
     prompt: string | ChatMessage[],
     imageURL?: string | PuterChatOptions,
     testMode?: boolean,
-    options?: PuterChatOptions
+    options?: PuterChatOptions,
   ) => {
     const puter = getPuter();
     if (!puter) {
@@ -350,7 +390,7 @@ export const usePuterStore = create<PuterStore>((set, get) => {
           ],
         },
       ],
-      { model: "claude-sonnet-4" }
+      { model: "claude-sonnet-4" },
     ) as Promise<AIResponse | undefined>;
   };
 
@@ -385,9 +425,58 @@ export const usePuterStore = create<PuterStore>((set, get) => {
     const puter = getPuter();
     if (!puter) {
       setError("Puter.js not available");
-      return;
+      // Throw so callers can handle the failure instead of continuing silently
+      throw new Error("Puter.js not available");
     }
-    return puter.kv.delete(key);
+    // Try available implementations in order and normalize behavior
+    const candidates: { fn?: Function; name: string }[] = [
+      { fn: puter.kv.delete, name: "delete" },
+      { fn: puter.kv.remove, name: "remove" },
+      { fn: puter.kv.del, name: "del" },
+    ];
+
+    const errors: string[] = [];
+
+    for (const c of candidates) {
+      if (typeof c.fn === "function") {
+        try {
+          const result = await (c.fn as Function).call(puter.kv, key);
+          if (result === false) {
+            errors.push(`Puter KV ${c.name} returned false`);
+            continue; // try next candidate
+          }
+          // Success
+          return true;
+        } catch (err) {
+          // If the error indicates the key is already missing, treat as success
+          try {
+            const isNotFound =
+              (err && typeof err === "object" && (err as any).code === "subject_does_not_exist") ||
+              (err && typeof err === "object" && /not found/i.test(JSON.stringify(err))) ||
+              (err && typeof err === "string" && /not found/i.test(err)) ||
+              (err instanceof Error && /not found/i.test(err.message));
+
+            if (isNotFound) {
+              // Key already absent — treat as successful delete
+              console.debug(`KV key not found when deleting ${key}, treating as deleted.`);
+              return true;
+            }
+          } catch (e) {
+            // ignore parsing errors and continue to collect original error
+          }
+
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push(`Puter KV ${c.name} failed: ${msg}`);
+          console.error(`Puter KV ${c.name} failed`, err);
+          // try next candidate
+          continue;
+        }
+      }
+    }
+
+    const finalMsg = `Puter KV delete failed for ${key}. Attempts: ${errors.join(' | ')}`;
+    setError(finalMsg);
+    throw new Error(finalMsg);
   };
 
   const listKV = async (pattern: string, returnValues?: boolean) => {
@@ -436,7 +525,7 @@ export const usePuterStore = create<PuterStore>((set, get) => {
         prompt: string | ChatMessage[],
         imageURL?: string | PuterChatOptions,
         testMode?: boolean,
-        options?: PuterChatOptions
+        options?: PuterChatOptions,
       ) => chat(prompt, imageURL, testMode, options),
       feedback: (path: string, message: string) => feedback(path, message),
       img2txt: (image: string | File | Blob, testMode?: boolean) =>
@@ -453,4 +542,4 @@ export const usePuterStore = create<PuterStore>((set, get) => {
     init,
     clearError: () => set({ error: null }),
   };
-});    
+});

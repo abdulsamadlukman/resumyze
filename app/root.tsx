@@ -37,6 +37,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io_re/favicon-16x16.png" />
         
         <script src="https://js.puter.com/v2/"></script>
         <Meta />
