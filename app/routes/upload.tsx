@@ -86,7 +86,7 @@ const Upload = () => {
            setStatusText('Analysis complete, redirecting...')
            console.log(data);
            navigate(`/resume/${uuid}`);
-       } } catch (err) {
+       } catch (err) {
    console.error('Analyze error:', err);
    let message = 'Something went wrong';
    try {
