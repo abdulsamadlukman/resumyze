@@ -33,6 +33,22 @@ const Upload = () => {
         setFile(file)
     }
 
+    const callAiWithRetry = async (path, instructions, retries = 3, delayMs = 3000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const result = await ai.feedback(path, instructions);
+      if (result) return result;
+    } catch (err) {
+      console.warn(`AI attempt ${i + 1} failed:`, err);
+    }
+    if (i < retries - 1) await new Promise(res => setTimeout(res, delayMs));
+  }
+  throw new Error('AI provider unavailable after multiple attempts');
+};
+
+// then use:
+const feedback = await callAiWithRetry(uploadedFile.path, prepareInstructions({ jobTitle, jobDescription }));
+  
     const handleAnalyze = async({ companyName, jobTitle, jobDescription, file} : {companyName: string, jobTitle: string, jobDescription: string, file: File }) => {
        try {
            setErrorText('');
@@ -88,15 +104,21 @@ const Upload = () => {
            navigate(`/resume/${uuid}`);
        } catch (err) {
    console.error('Analyze error:', err);
-   let message = 'Something went wrong';
-   try {
-     message = err instanceof Error ? err.message : JSON.stringify(err);
-   } catch {
-     message = String(err);
+   let message = 'Something went wrong. Please try again.';
+
+   const raw = err instanceof Error ? err.message : JSON.stringify(err);
+
+   if (raw.includes('upstream_provider_unavailable') || raw.includes('AI provider unavailable')) {
+     message = "Our AI service is temporarily busy or unavailable. Please wait a minute and try again.";
+   } else if (raw.includes('Failed to upload')) {
+     message = "We couldn't upload your file. Please check your connection and try again.";
+   } else if (raw.includes('Failed to convert PDF')) {
+     message = "We couldn't process that PDF. Please make sure it's a valid PDF under 20MB.";
    }
+
    setErrorText(message);
    setIsProcessing(false);
-}
+       }
     }
 
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
