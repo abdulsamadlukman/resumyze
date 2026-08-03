@@ -65,10 +65,10 @@ const Upload = () => {
 
            setStatusText('Analyzing resume...');
 
-           const feedback = await ai.feedback(
-              uploadedFile.path,
-              prepareInstructions({ jobTitle, jobDescription })
-           )
+           const feedback = await Promise.race([
+  ai.feedback(uploadedFile.path, prepareInstructions({ jobTitle, jobDescription })),
+  new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out waiting for AI response')), 25000))
+]);
            if(!feedback) throw new Error('Failed to analyze resume - no response from AI. This may be a Puter AI usage limit or session issue.');
 
            const feedbackText = typeof feedback.message.content === 'string'
