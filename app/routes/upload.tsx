@@ -86,11 +86,17 @@ const Upload = () => {
            setStatusText('Analysis complete, redirecting...')
            console.log(data);
            navigate(`/resume/${uuid}`);
-       } catch (err) {
-           console.error('Analyze error:', err);
-           setErrorText(err instanceof Error ? err.message : 'Something went wrong');
-           setIsProcessing(false);
-       }
+       } } catch (err) {
+   console.error('Analyze error:', err);
+   let message = 'Something went wrong';
+   try {
+     message = err instanceof Error ? err.message : JSON.stringify(err);
+   } catch {
+     message = String(err);
+   }
+   setErrorText(message);
+   setIsProcessing(false);
+}
     }
 
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
